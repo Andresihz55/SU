@@ -5,7 +5,7 @@ import os
 
 app = FastAPI()
 
-# Optional CORS middleware (only needed if frontend calls this API)
+# Allow frontend requests from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,25 +14,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI on Render!"}
 
 @app.get("/stock/{symbol}")
-def get_stock_data(symbol: str):
-    api_key = os.environ.get("FINNHUB_API_KEY")
-    url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}"
+def get_stock(symbol: str):
+    url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={FINNHUB_API_KEY}"
     response = requests.get(url)
-
-    if response.status_code != 200:
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "symbol": symbol.upper(),
+            "price": data.get("c"),
+            "high": data.get("h"),
+            "low": data.get("l"),
+            "open": data.get("o"),
+            "previous_close": data.get("pc")
+        }
+    else:
         return {"error": "Failed to fetch data"}
-
-    data = response.json()
-    return {
-        "symbol": symbol,
-        "price": data.get("c"),
-        "high": data.get("h"),
-        "low": data.get("l"),
-        "open": data.get("o"),
-        "prev_close": data.get("pc")
-    }
